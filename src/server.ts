@@ -16,6 +16,8 @@ app.get("/health", (_req, res) => {
 
 app.post("/generate-fop-pdf", async (req, res) => {
   try {
+    console.log("EXPECTED SECRET =", process.env.WORKER_SHARED_SECRET);
+    console.log("INCOMING SECRET =", req.header("x-worker-secret"));
     const workerSecret = process.env.WORKER_SHARED_SECRET;
     const incomingSecret = req.header("x-worker-secret");
 
