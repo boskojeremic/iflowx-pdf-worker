@@ -35,7 +35,17 @@ export async function buildFopPdf({
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
 
   try {
-    browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({
+  headless: true,
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--no-zygote",
+    "--single-process"
+  ]
+});
     const page = await browser.newPage();
 
     const response = await page.goto(previewUrl, {
