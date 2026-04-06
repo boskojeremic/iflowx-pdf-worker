@@ -27,8 +27,6 @@ export async function buildFopPdf({
     throw new Error("PDF_INTERNAL_SECRET is not configured.");
   }
 
-  const fileName = `${safe(documentNumber)}.pdf`;
-
   const previewUrl =
     `${baseUrl}/fop-preview/${encodeURIComponent(reportCode)}` +
     `?date=${encodeURIComponent(reportDate)}` +
@@ -39,16 +37,20 @@ export async function buildFopPdf({
   let browser: Browser | null = null;
 
   try {
+    const isLinuxRuntime = process.platform === "linux";
+
     browser = await chromium.launch({
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--no-zygote",
-        "--single-process",
-      ],
+      args: isLinuxRuntime
+        ? [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--no-zygote",
+            "--single-process",
+          ]
+        : [],
     });
 
     const page = await browser.newPage();
@@ -64,6 +66,28 @@ export async function buildFopPdf({
       );
     }
 
+    // 🔥 FORCE WHITE BACKGROUND (glavni fix za crno)
+    await page.evaluate(() => {
+      document.documentElement.style.background = "#ffffff";
+      document.documentElement.style.margin = "0";
+      document.documentElement.style.padding = "0";
+
+      document.body.style.background = "#ffffff";
+      document.body.style.margin = "0";
+      document.body.style.padding = "0";
+
+      const root =
+        document.getElementById("__next") ||
+        document.getElementById("pdf-report") ||
+        document.querySelector("main");
+
+      if (root instanceof HTMLElement) {
+        root.style.background = "#ffffff";
+        root.style.margin = "0";
+        root.style.padding = "0";
+      }
+    });
+
     await page.waitForSelector("#pdf-report", { timeout: 30000 });
     await page.emulateMedia({ media: "print" });
 
@@ -71,7 +95,6 @@ export async function buildFopPdf({
       content: `
         @page {
           size: A4;
-          margin: 0;
         }
 
         html, body {
@@ -83,21 +106,28 @@ export async function buildFopPdf({
           print-color-adjust: exact;
         }
 
-        #pdf-report {
+        #__next,
+        #pdf-report,
+        main {
           background: #ffffff !important;
         }
 
         table {
-          page-break-inside: auto;
+          width: 100%;
+          border-collapse: collapse;
         }
 
         thead {
           display: table-header-group;
         }
 
-        tr, td, th {
+        tr {
           page-break-inside: avoid;
           break-inside: avoid;
+        }
+
+        td, th {
+          vertical-align: top;
         }
       `,
     });
@@ -105,39 +135,33 @@ export async function buildFopPdf({
     const pdfBytes = await page.pdf({
       format: "A4",
       printBackground: true,
-      preferCSSPageSize: true,
       displayHeaderFooter: true,
+      preferCSSPageSize: false,
       headerTemplate: `
         <div style="
           width: 100%;
-          height: 0px;
-          background: #ffffff;
+          height: 0;
+          font-size: 0;
           color: transparent;
-          font-size: 1px;
-        ">
-          .
-        </div>
+        "></div>
       `,
       footerTemplate: `
         <div style="
           width: 100%;
-          background: #ffffff;
-          color: #6b7280;
-          font-size: 9px;
-          padding: 0 10mm 4px 10mm;
-          box-sizing: border-box;
           font-family: Arial, Helvetica, sans-serif;
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
+          font-size: 9px;
+          color: #6b7280;
+          padding: 0 10mm 6mm 10mm;
+          box-sizing: border-box;
+          text-align: right;
         ">
           Page&nbsp;<span class="pageNumber"></span>&nbsp;of&nbsp;<span class="totalPages"></span>
         </div>
       `,
       margin: {
-        top: "0mm",
+        top: "12mm",
         right: "10mm",
-        bottom: "14mm",
+        bottom: "20mm",
         left: "10mm",
       },
     });
