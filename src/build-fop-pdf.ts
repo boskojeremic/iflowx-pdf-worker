@@ -1,14 +1,10 @@
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
 
 type BuildFopPdfParams = {
   reportCode: string;
   reportDate: string;
   revisionNo: number;
 };
-
-function safe(value: string) {
-  return String(value || "").replace(/[^a-zA-Z0-9._-]/g, "_");
-}
 
 export async function buildFopPdf({
   reportCode,
@@ -32,20 +28,21 @@ export async function buildFopPdf({
     `&pdf=1` +
     `&key=${encodeURIComponent(pdfSecret)}`;
 
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let browser: Browser | null = null;
 
   try {
-    const browser = await chromium.launch({
-  headless: true,
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--no-zygote",
-    "--single-process"
-  ]
-});
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+        "--single-process",
+      ],
+    });
+
     const page = await browser.newPage();
 
     const response = await page.goto(previewUrl, {
@@ -102,7 +99,6 @@ export async function buildFopPdf({
       printBackground: true,
       preferCSSPageSize: true,
       displayHeaderFooter: true,
-
       headerTemplate: `
         <div style="
           width: 100%;
@@ -114,7 +110,6 @@ export async function buildFopPdf({
           .
         </div>
       `,
-
       footerTemplate: `
         <div style="
           width: 100%;
@@ -131,7 +126,6 @@ export async function buildFopPdf({
           Page&nbsp;<span class="pageNumber"></span>&nbsp;of&nbsp;<span class="totalPages"></span>
         </div>
       `,
-
       margin: {
         top: "0mm",
         right: "10mm",
