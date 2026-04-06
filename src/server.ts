@@ -28,7 +28,7 @@ app.post("/generate-fop-pdf", async (req, res) => {
       });
     }
 
-    const { reportCode, reportDate, revisionNo } = req.body ?? {};
+    const { reportCode, reportDate, revisionNo, documentNumber } = req.body ?? {};
 
     if (!reportCode || !reportDate || revisionNo === undefined || revisionNo === null) {
       return res.status(400).json({
@@ -38,10 +38,11 @@ app.post("/generate-fop-pdf", async (req, res) => {
     }
 
     const pdfBuffer = await buildFopPdf({
-      reportCode: String(reportCode),
-      reportDate: String(reportDate),
-      revisionNo: Number(revisionNo),
-    });
+  reportCode: String(reportCode),
+  reportDate: String(reportDate),
+  revisionNo: Number(revisionNo),
+  documentNumber: String(documentNumber),
+});
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(

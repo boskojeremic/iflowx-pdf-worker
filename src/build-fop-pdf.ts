@@ -4,12 +4,18 @@ type BuildFopPdfParams = {
   reportCode: string;
   reportDate: string;
   revisionNo: number;
+  documentNumber: string;
 };
+
+function safe(value: string) {
+  return String(value || "").replace(/[^a-zA-Z0-9._-]/g, "_");
+}
 
 export async function buildFopPdf({
   reportCode,
   reportDate,
   revisionNo,
+  documentNumber,
 }: BuildFopPdfParams): Promise<Buffer> {
   const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
   if (!baseUrl) {
@@ -20,6 +26,8 @@ export async function buildFopPdf({
   if (!pdfSecret) {
     throw new Error("PDF_INTERNAL_SECRET is not configured.");
   }
+
+  const fileName = `${safe(documentNumber)}.pdf`;
 
   const previewUrl =
     `${baseUrl}/fop-preview/${encodeURIComponent(reportCode)}` +
